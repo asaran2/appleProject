@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+google-cloud-aiplatform
+google-cloud-firestore
+pinecone-client
+scikit-learn
+pandas
+xmltodict
+python-dotenv
