@@ -103,15 +103,30 @@ Define a “Wellbeing Coach Agent” with these capabilities:
 4. Add your `.env` configuration for Google Cloud or Pinecone if required by the models.
 5. Start the backend server:
    ```bash
-   python main.py
-   # Or alternatively: uvicorn main:app --reload
+   uvicorn main:app --host 0.0.0.0 --port 8080
    ```
-   The API will be available at `http://0.0.0.0:8000`.
+
+### Exposing the Backend (Serveo Tunnel)
+
+To allow the iOS device to communicate with your local backend, expose it to the internet:
+
+1. Open a **new** terminal window and navigate to the `backend` directory.
+2. Run the Serveo SSH tunnel command:
+   ```bash
+   ssh -R 80:localhost:8080 serveo.net
+   ```
+3. Serveo will output a forwarding URL (e.g., `https://[RANDOM_ID].serveousercontent.com`). **Copy this URL.**
+
+*Note: If the tunnel times out or you receive a `502 Bad Gateway` error later on, simply restart this command to generate a new URL.*
 
 ### Frontend (iOS App + Swift)
 
 1. Open Xcode.
-2. Select **Open an existing project** or go to **File > Open**.
-3. Navigate to `mentalHealth/mentalHealth.xcodeproj` and open it.
-4. Select your target device (e.g., your iPhone or a Simulator with HealthKit enabled).
-5. Press the **Play** (Build and Run) button or `Cmd + R` to run the app. Make sure to allow HealthKit permissions when prompted.
+2. Navigate to `mentalHealth/mentalHealth.xcodeproj` and open it.
+3. Open `mentalHealth/ViewModels/InsightViewModel.swift`.
+4. Update the `backendURL` property with your new Serveo URL, appending `/api/v1` to the end:
+   ```swift
+   private let backendURL = "https://[COPIED_SERVEO_URL]/api/v1"
+   ```
+5. Select your target device (e.g., your iPhone or a Simulator with HealthKit enabled).
+6. Press the **Play** (Build and Run) button or `Cmd + R` to run the app. Make sure to allow HealthKit permissions when prompted.

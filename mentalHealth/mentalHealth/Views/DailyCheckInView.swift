@@ -16,6 +16,15 @@ struct DailyCheckInView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 50)
                     } else {
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.red)
+                                .cornerRadius(10)
+                        }
+                        
                         // AI Summary Card
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
