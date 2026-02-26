@@ -114,7 +114,7 @@ class HealthKitManager: ObservableObject {
             var totalSleepSeconds: TimeInterval = 0
             for sample in categorySamples {
                 // value == 0 is typically inBed. 1 or higher usually denotes sleep stages.
-                if sample.value == HKCategoryValueSleepAnalysis.asleep.rawValue || 
+                if sample.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue ||
                    sample.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
                    sample.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
                    sample.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue {

@@ -4,6 +4,7 @@ struct DailyCheckInView: View {
     @EnvironmentObject var viewModel: InsightViewModel
     @State private var moodScore: Double = 5.0
     @State private var journalText: String = ""
+    @State private var answers: [String: String] = [:]
     
     var body: some View {
         NavigationView {
@@ -53,9 +54,23 @@ struct DailyCheckInView: View {
                                 .fontWeight(.bold)
                             
                             ForEach(viewModel.dailyPrompts, id: \.self) { prompt in
-                                Text("• \(prompt)")
-                                    .font(.body)
-                                    .foregroundColor(.primary)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("• \(prompt)")
+                                        .font(.body)
+                                        .foregroundColor(.primary)
+                                        .bold()
+                                    
+                                    TextEditor(text: Binding(
+                                        get: { self.answers[prompt] ?? "" },
+                                        set: { self.answers[prompt] = $0 }
+                                    ))
+                                    .frame(height: 80)
+                                    .padding(4)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                                    )
+                                }
                             }
                         }
                         
@@ -89,19 +104,29 @@ struct DailyCheckInView: View {
                                 )
                             
                             Button(action: {
-                                viewModel.submitJournal(text: journalText, moodScore: Int(moodScore))
+                                var combinedText = ""
+                                for prompt in viewModel.dailyPrompts {
+                                    if let answer = answers[prompt], !answer.isEmpty {
+                                        combinedText += "Q: \(prompt)\n A: \(answer)\n\n"
+                                    }
+                                }
+                                if !journalText.isEmpty {
+                                    combinedText += "Overall reflection:\n\(journalText)"
+                                }
+                                
+                                viewModel.submitJournal(text: combinedText, moodScore: Int(moodScore))
                                 // Very basic clear for MVP
+                                answers.removeAll()
                                 journalText = ""
                             }) {
-                                Text("Save Journal")
+                                Text("Submit Daily Check-In")
                                     .font(.headline)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding()
-                                    .background(journalText.isEmpty ? Color.gray : Color.blue)
+                                    .background(Color.blue)
                                     .cornerRadius(12)
                             }
-                            .disabled(journalText.isEmpty)
                         }
                     }
                 }

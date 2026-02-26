@@ -11,7 +11,7 @@ class InsightViewModel: ObservableObject {
     @Published var lastSyncedTime: String? = nil
     @Published var dataDate: String? = nil
     
-    private let backendURL = "http://10.23.107.33:8000/api/v1" // Use your Mac's local IP address to allow connectivity between devices
+    private let backendURL = "http://127.0.0.1:8000/api/v1" // Use your Mac's local IP address to allow connectivity between devices
     private let userId = "arushi_demo_1"
     
     let hkManager = HealthKitManager.shared

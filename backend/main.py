@@ -3,6 +3,14 @@ from pydantic import BaseModel
 from typing import Dict, Any, List
 from datetime import date
 from dotenv import load_dotenv
+import logging
+
+# Configure logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("api_logger")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,6 +67,8 @@ async def sync_health_data(payload: RawHealthData):
                 else:
                     data_dict = payload.payload
                 
+                print(f"Received health payload from user {uid}: {data_dict}")
+                
                 dm = DailyMetrics(
                     user_id=uid,
                     date=date.fromisoformat(data_dict.get("date", str(date.today())).split("T")[0]),
@@ -112,13 +122,15 @@ async def sync_health_data(payload: RawHealthData):
             DB_ANOMALIES[uid] = []
         DB_ANOMALIES[uid].append(anomaly)
         
-        return {
+        response_payload = {
             "status": "success", 
             "days_processed": len(user_metrics),
             "latest_date": str(today_metrics.date),
             "anomaly_detected": anomaly.is_stress_event,
             "anomaly_score": anomaly.score
         }
+        logger.info(f"API Response [/sync-health]: {response_payload}")
+        return response_payload
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -130,11 +142,13 @@ async def get_checkin_prompts(user_id: str):
     """
     if user_id not in DB_METRICS or not DB_METRICS[user_id]:
         # Fallback if no data
-        return agent.generate_daily_insights(
+        fallback_resp = agent.generate_daily_insights(
             user_id, 
             DailyMetrics(user_id=user_id, date=date.today()), 
             AnomalyReport(user_id=user_id, date=date.today(), is_stress_event=False, score=0.0)
         )
+        logger.info(f"API Response [/daily-checkin fallback]: {fallback_resp.model_dump()}")
+        return fallback_resp
         
     # Get latest
     latest_metrics = sorted(DB_METRICS[user_id], key=lambda x: x.date)[-1]
@@ -148,6 +162,7 @@ async def get_checkin_prompts(user_id: str):
     
     # Ask Vertex Agent
     insights = agent.generate_daily_insights(user_id, latest_metrics, latest_anomaly, recent_journals)
+    logger.info(f"API Response [/daily-checkin]: {insights.model_dump()}")
     return insights
 
 @app.post("/api/v1/journal")
@@ -164,7 +179,9 @@ async def create_journal_entry(entry: JournalEntry):
     # embedding = vertex_ai.get_text_embedding(entry.text_content)
     # pinecone_index.upsert(...)
     
-    return {"status": "success", "message": "Journal saved", "entry_id": len(DB_JOURNALS[entry.user_id])}
+    response_payload = {"status": "success", "message": "Journal saved", "entry_id": len(DB_JOURNALS[entry.user_id])}
+    logger.info(f"API Response [/journal]: {response_payload}")
+    return response_payload
 
 if __name__ == "__main__":
     import uvicorn
