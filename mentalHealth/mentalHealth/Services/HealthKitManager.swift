@@ -52,26 +52,63 @@ class HealthKitManager: ObservableObject {
         // 1. Fetch Resting Heart Rate Avg
         dispatchGroup.enter()
         fetchAveragedQuantity(for: .restingHeartRate, predicate: predicate) { avgRHR in
-            if let rhr = avgRHR { metricsPayload["rhr_avg"] = rhr }
+            if let rhr = avgRHR { 
+                metricsPayload["rhr_avg"] = rhr 
+                print("✅ Found Resting Heart Rate: \(rhr)")
+            } else {
+                print("ℹ️ No Resting Heart Rate found for today yet.")
+            }
             dispatchGroup.leave()
         }
         
         // 2. Fetch Sleep Duration (Hrs)
         dispatchGroup.enter()
         fetchSleepDuration(predicate: predicate) { sleepHrs in
-            if let hrs = sleepHrs { metricsPayload["sleep_duration_hrs"] = hrs }
+            if let hrs = sleepHrs { 
+                metricsPayload["sleep_duration_hrs"] = hrs 
+                print("✅ Found Sleep: \(hrs) hrs")
+            } else {
+                print("ℹ️ No Sleep data found for today's range.")
+            }
             dispatchGroup.leave()
         }
         
         // 3. Fetch HRV (Avg SDNN)
         dispatchGroup.enter()
         fetchAveragedQuantity(for: .heartRateVariabilitySDNN, predicate: predicate) { avgHRV in
-            if let hrv = avgHRV { metricsPayload["hrv_rmssd"] = hrv } // Mapping SDNN as proxy for MVP
+            if let hrv = avgHRV { 
+                metricsPayload["hrv_rmssd"] = hrv 
+                print("✅ Found HRV: \(hrv)")
+            } else {
+                print("ℹ️ No HRV data found for today.")
+            }
+            dispatchGroup.leave()
+        }
+        
+        // 4. Fetch Respiratory Rate
+        dispatchGroup.enter()
+        fetchAveragedQuantity(for: .respiratoryRate, predicate: predicate) { avgResp in
+            if let resp = avgResp { 
+                metricsPayload["respiratory_rate_avg"] = resp 
+                print("✅ Found Respiratory Rate: \(resp)")
+            } else {
+                print("ℹ️ No Respiratory Rate found for today.")
+            }
             dispatchGroup.leave()
         }
         
         dispatchGroup.notify(queue: .main) {
-            completion(metricsPayload)
+            // Check if we actually found any physiological data.
+            let physiologicalKeys = ["rhr_avg", "sleep_duration_hrs", "hrv_rmssd", "respiratory_rate_avg"]
+            let hasData = metricsPayload.keys.contains { physiologicalKeys.contains($0) }
+            
+            if hasData {
+                print("--- FETCH COMPLETED: SEEDING DATA TO BACKEND ---")
+                completion(metricsPayload)
+            } else {
+                print("--- FETCH COMPLETED: NO PHYSIOLOGICAL DATA FOUND ---")
+                completion(nil)
+            }
         }
     }
     
