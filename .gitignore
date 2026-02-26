@@ -7,4 +7,5 @@ venv/
 *.json
 *.xcuserdatad
 xcuserdata/
-.DS_Store
+*.xcuserstate
+.DS_Store.DS_Store
