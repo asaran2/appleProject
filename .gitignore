@@ -1,9 +1,10 @@
 .env
 export.xml
 export_cda.xml
-apple_health_export/export.xml
-apple_health_export/export_cda.xml
 apple_health_export/
-
 backend/__pycache__/
 venv/
+*.json
+*.xcuserdatad
+xcuserdata/
+.DS_Store

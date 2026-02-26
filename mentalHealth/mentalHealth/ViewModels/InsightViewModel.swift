@@ -11,9 +11,8 @@ class InsightViewModel: ObservableObject {
     @Published var lastSyncedTime: String? = nil
     @Published var dataDate: String? = nil
     
-    // private let backendURL = "http://127.0.0.1:8000/api/v1" // Use your Mac's local IP address to allow connectivity between devices
-    private let backendURL = "https://f85801e7bb6a2687-68-181-17-181.serveousercontent.com/api/v1" // Use your Mac's local IP address to allow connectivity between devices
-    
+    private let backendURL = "http://127.0.0.1:8000/api/v1" // Use localhost for the iOS Simulator
+    // private let backendURL = "https://f85801e7bb6a2687-68-181-17-181.serveousercontent.com/api/v1" // Use the tunnel URL for remote connectivity
     private let userId = "arushi_demo_1"
     
     let hkManager = HealthKitManager.shared
@@ -140,7 +139,7 @@ class InsightViewModel: ObservableObject {
     func submitJournal(text: String, moodScore: Int) {
         let requestBody: [String: Any] = [
             "user_id": userId,
-            "date": ISO8601DateFormatter().string(from: Date()),
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
             "mood_score": moodScore,
             "text_content": text
         ]

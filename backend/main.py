@@ -20,6 +20,7 @@ from models import RawHealthData, DailyMetrics, AnomalyReport, AgentResponse, Jo
 import ingestion
 import ml_engine
 import agent
+import database
 
 app = FastAPI(
     title="Insight Journal MVP API",
@@ -27,15 +28,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# --- MOCK DATABASE ---
-# For the MVP scaffold before wiring Pinecone/Firestore keys, we will use in-memory stores
-DB_METRICS: Dict[str, List[DailyMetrics]] = {}
-DB_ANOMALIES: Dict[str, List[AnomalyReport]] = {}
-DB_JOURNALS: Dict[str, List[JournalEntry]] = {}
+# REPLACED: Mock DB removed in favor of Firestore in database.py
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Insight Journal API is running"}
+    return {"status": "ok", "message": "Insight Journal API is running with Firestore"}
 
 @app.post("/api/v1/sync-health")
 async def sync_health_data(payload: RawHealthData):
@@ -49,15 +46,10 @@ async def sync_health_data(payload: RawHealthData):
         
         # 1. Ingest Data
         if payload.data_source == "apple_watch_healthkit":
-            # Direct insertion from our iOS App's HealthKit payload
             try:
-                # The payload is expected to be a dict or a JSON string matching the DailyMetrics model
                 import json
-                
-                # Check if it was parsed as string or raw dict
                 data_dict = {}
                 if isinstance(payload.payload, str):
-                    # Sometimes quotes get escaped over HTTP Post, strip standard dict repr
                     clean_str = payload.payload.replace("'", '"')
                     try:
                         data_dict = json.loads(clean_str)
@@ -82,7 +74,7 @@ async def sync_health_data(payload: RawHealthData):
                 print(f"Error parsing HealthKit JSON: {e}")
                 
         else:
-            # Fallback to the XML file ingestion for older testing logic
+            # Fallback to the XML file ingestion
             import tempfile
             import os
             
@@ -101,26 +93,23 @@ async def sync_health_data(payload: RawHealthData):
         if not user_metrics:
             return {"status": "error", "message": "No valid metrics parsed."}
 
-        # Save to DB
-        if uid not in DB_METRICS:
-            DB_METRICS[uid] = []
-        
-        # Append only if it's new (or overwrite if same date for MVP simplicity)
+        # Save to Firestore
         for m in user_metrics:
-            DB_METRICS[uid] = [existing for existing in DB_METRICS[uid] if existing.date != m.date]
-            DB_METRICS[uid].append(m)
+            database.save_daily_metrics(uid, m)
         
         # 2. Run Anomaly Detection 
-        sorted_metrics = sorted(DB_METRICS[uid], key=lambda x: x.date)
-        today_metrics = sorted_metrics[-1]
-        historical = sorted_metrics[:-1]
+        historical = database.get_historical_metrics(uid)
+        if not historical:
+            # This should ideally not happen after saving above, but safety first
+            return {"status": "error", "message": "Failed to retrieve historical data."}
+            
+        today_metrics = historical[-1]
+        historical_metrics = historical[:-1]
         
-        anomaly = ml_engine.detect_anomalies(uid, historical, today_metrics)
+        anomaly = ml_engine.detect_anomalies(uid, historical_metrics, today_metrics)
         
-        # Save Anomaly
-        if uid not in DB_ANOMALIES:
-            DB_ANOMALIES[uid] = []
-        DB_ANOMALIES[uid].append(anomaly)
+        # Save Anomaly to Firestore
+        database.save_anomaly(uid, anomaly)
         
         response_payload = {
             "status": "success", 
@@ -138,9 +127,10 @@ async def sync_health_data(payload: RawHealthData):
 @app.get("/api/v1/daily-checkin", response_model=AgentResponse)
 async def get_checkin_prompts(user_id: str):
     """
-    Generates Agentic AI prompts based on recent data from the DB.
+    Generates Agentic AI prompts based on recent data from Firestore.
     """
-    if user_id not in DB_METRICS or not DB_METRICS[user_id]:
+    historical_metrics = database.get_historical_metrics(user_id)
+    if not historical_metrics:
         # Fallback if no data
         fallback_resp = agent.generate_daily_insights(
             user_id, 
@@ -151,14 +141,15 @@ async def get_checkin_prompts(user_id: str):
         return fallback_resp
         
     # Get latest
-    latest_metrics = sorted(DB_METRICS[user_id], key=lambda x: x.date)[-1]
+    latest_metrics = historical_metrics[-1]
     
-    # Get latest anomaly (should match date)
-    latest_anomalies = sorted(DB_ANOMALIES.get(user_id, []), key=lambda x: x.date)
-    latest_anomaly = latest_anomalies[-1] if latest_anomalies else AnomalyReport(user_id=user_id, date=latest_metrics.date, is_stress_event=False, score=0.0)
+    # Get latest anomaly from Firestore
+    latest_anomaly = database.get_latest_anomaly(user_id)
+    if not latest_anomaly or latest_anomaly.date != latest_metrics.date:
+        latest_anomaly = AnomalyReport(user_id=user_id, date=latest_metrics.date, is_stress_event=False, score=0.0)
     
-    # Get recent journals 
-    recent_journals = DB_JOURNALS.get(user_id, [])[-3:] # Last 3
+    # Get recent journals from Firestore
+    recent_journals = database.get_recent_journals(user_id, limit=3)
     
     # Ask Vertex Agent
     insights = agent.generate_daily_insights(user_id, latest_metrics, latest_anomaly, recent_journals)
@@ -168,18 +159,11 @@ async def get_checkin_prompts(user_id: str):
 @app.post("/api/v1/journal")
 async def create_journal_entry(entry: JournalEntry):
     """
-    Saves a user journal entry to the database and Pinecone.
+    Saves a user journal entry to Firestore.
     """
-    if entry.user_id not in DB_JOURNALS:
-        DB_JOURNALS[entry.user_id] = []
-        
-    DB_JOURNALS[entry.user_id].append(entry)
+    database.save_journal(entry.user_id, entry)
     
-    # In a full deployment, this is where we'd hit Pinecone API and Firestore API
-    # embedding = vertex_ai.get_text_embedding(entry.text_content)
-    # pinecone_index.upsert(...)
-    
-    response_payload = {"status": "success", "message": "Journal saved", "entry_id": len(DB_JOURNALS[entry.user_id])}
+    response_payload = {"status": "success", "message": "Journal saved to Firestore"}
     logger.info(f"API Response [/journal]: {response_payload}")
     return response_payload
 
