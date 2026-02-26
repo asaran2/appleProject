@@ -116,7 +116,13 @@ async def sync_health_data(payload: RawHealthData):
             "days_processed": len(user_metrics),
             "latest_date": str(today_metrics.date),
             "anomaly_detected": anomaly.is_stress_event,
-            "anomaly_score": anomaly.score
+            "anomaly_score": anomaly.score,
+            "metrics_summary": {
+                "rhr": today_metrics.rhr_avg,
+                "hrv": today_metrics.hrv_rmssd,
+                "respiratory_rate": today_metrics.respiratory_rate_avg,
+                "sleep_hrs": today_metrics.sleep_duration_hrs
+            }
         }
         logger.info(f"API Response [/sync-health]: {response_payload}")
         return response_payload
