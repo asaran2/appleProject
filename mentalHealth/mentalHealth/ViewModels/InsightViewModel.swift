@@ -28,6 +28,10 @@ class InsightViewModel: ObservableObject {
         }
     }
     
+    func skipOnboarding() {
+        self.healthDataSynced = true
+    }
+    
     // MARK: - 2. Fetch from Watch and Sync to Backend
     func syncHealthData() {
         self.isLoading = true

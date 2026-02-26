@@ -2,146 +2,72 @@ import SwiftUI
 
 struct DailyCheckInView: View {
     @EnvironmentObject var viewModel: InsightViewModel
-    @State private var moodScore: Double = 5.0
-    @State private var journalText: String = ""
-    @State private var answers: [String: String] = [:]
+    @State private var showingJournal = false
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 25) {
-                    
-                    if viewModel.isLoading {
-                        ProgressView("Analyzing your physiology...")
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 50)
-                    } else {
-                        // AI Summary Card
-                        VStack(alignment: .leading, spacing: 10) {
+            ZStack {
+                // Background
+                AppTheme.auroraBackground.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppTheme.vSpacing) {
+                        
+                        // Mood Tracker Section
+                        MoodTrackerView()
+                            .frame(height: 380)
+                        
+                        // Insight Summary Card
+                        VStack(alignment: .leading, spacing: 16) {
                             HStack {
-                                Text("Daily Insight")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
+                                Label("Physiology Insight", systemImage: "sparkles")
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(AppTheme.auroraPink)
                                 Spacer()
-                                if let syncTime = viewModel.lastSyncedTime {
-                                    Text("Updated \(syncTime)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            if let dataDate = viewModel.dataDate {
-                                Text("Showing metrics for \(dataDate)")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.blue)
                             }
                             
                             Text(viewModel.dailySummary)
-                                .font(.body)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(10)
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundColor(AppTheme.auroraDeepPurple)
+                                .lineSpacing(4)
                         }
+                        .floatingGlassCard()
+                        .padding(.horizontal, AppTheme.hPadding)
                         
-                        Divider()
-                        
-                        // Reflection Prompts
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("Reflection Prompts")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                        // Journaling Entry Point
+                        VStack(spacing: 24) {
+                            Image(systemName: "pencil.and.outline")
+                                .font(.system(size: 40))
+                                .foregroundColor(AppTheme.auroraPink)
                             
-                            ForEach(viewModel.dailyPrompts, id: \.self) { prompt in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("• \(prompt)")
-                                        .font(.body)
-                                        .foregroundColor(.primary)
-                                        .bold()
-                                    
-                                    TextEditor(text: Binding(
-                                        get: { self.answers[prompt] ?? "" },
-                                        set: { self.answers[prompt] = $0 }
-                                    ))
-                                    .frame(height: 80)
-                                    .padding(4)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                                    )
-                                }
-                            }
-                        }
-                        
-                        Divider()
-                        
-                        // Journal Entry
-                        VStack(alignment: .leading, spacing: 15) {
-                            Text("How are you feeling overall?")
-                                .font(.headline)
-                            
-                            HStack {
-                                Text("Low")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Slider(value: $moodScore, in: 1...10, step: 1)
-                                Text("High")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Text("Mood Score: \(Int(moodScore))/10")
-                                .font(.caption)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            
-                            TextEditor(text: $journalText)
-                                .frame(height: 150)
-                                .padding(4)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                                )
+                            Text("Ready for your reflection?")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(AppTheme.auroraDeepPurple)
                             
                             Button(action: {
-                                var combinedText = ""
-                                for prompt in viewModel.dailyPrompts {
-                                    if let answer = answers[prompt], !answer.isEmpty {
-                                        combinedText += "Q: \(prompt)\n A: \(answer)\n\n"
-                                    }
-                                }
-                                if !journalText.isEmpty {
-                                    combinedText += "Overall reflection:\n\(journalText)"
-                                }
-                                
-                                viewModel.submitJournal(text: combinedText, moodScore: Int(moodScore))
-                                // Very basic clear for MVP
-                                answers.removeAll()
-                                journalText = ""
+                                showingJournal = true
                             }) {
-                                Text("Submit Daily Check-In")
-                                    .font(.headline)
+                                Text("Start Journaling")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(12)
+                                    .background(Capsule().fill(AppTheme.auroraIndigo))
+                                    .ambientGlow(color: AppTheme.auroraIndigo, intensity: 0.3)
                             }
                         }
+                        .floatingGlassCard()
+                        .padding(.horizontal, AppTheme.hPadding)
+                        
+                        Spacer(minLength: 80)
                     }
                 }
-                .padding()
             }
             .navigationTitle("Today's Check-In")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        viewModel.syncHealthData()
-                    }) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.headline)
-                    }
-                }
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showingJournal) {
+                JournalFlashcardView()
+                    .environmentObject(viewModel)
             }
         }
     }
