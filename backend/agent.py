@@ -2,17 +2,27 @@ import os
 import json
 from datetime import date
 from typing import List
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from models import DailyMetrics, AnomalyReport, AgentResponse, JournalEntry
 import google.generativeai as genai
 
 # Initialize Gemini API
-api_key = os.getenv("GEMINI_API_KEY", "")
+api_key = os.getenv("GEMINI_API_KEY", "").strip()
 if api_key:
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-2.0-flash')
 else:
-    print("Warning: GEMINI_API_KEY not found in environment.")
-    model = None
+    # Use the exported one if .env didn't work for some reason
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if api_key:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+    else:
+        print("Warning: GEMINI_API_KEY not found in environment.")
+        model = None
 
 def _format_context_for_prompt(today_metrics: DailyMetrics, 
                                anomaly: AnomalyReport, 
