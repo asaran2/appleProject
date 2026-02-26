@@ -5,7 +5,11 @@ apple_health_export/
 backend/__pycache__/
 venv/
 *.json
+
+# Xcode / Mac clutter
+.DS_Store
 *.xcuserdatad
 xcuserdata/
+DerivedData/
 *.xcuserstate
-.DS_Store.DS_Store
+*.xcbkptlist
