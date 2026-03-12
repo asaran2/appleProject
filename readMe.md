@@ -69,22 +69,8 @@ Define a “Wellbeing Coach Agent” with these capabilities:
 - **Question generation:** Craft 2–3 short questions inspired by positive psychology.
 - **Insight generation:** Output a "One-paragraph story" daily, and short bullet insights weekly.
 
-## 6. iOS app implementation steps (hackathon scope)
 
-**Day 1 – Plumbing**
-- Create Swift/SwiftUI app, set up HealthKit entitlements.
-- Build basic models for `UserProfile`, `DailyMetrics`, `JournalEntry`.
-- Implement HealthKit queries and local aggregations.
-- Implement local journaling UI (mood slider + text fields) with CoreData persistence.
-
-**Day 2 – AI + API**
-- Add backend (FastAPI) that receives daily aggregates and runs the minimal Isolation Forest model.
-- Expose endpoints like `/sync-health` and `/daily-checkin`.
-- Wire in Google GenAI APIs for the "coach" endpoint.
-- In the iOS app, fetch the questions and create simple daily insights screens.
-
-
-## 7. How to Run This MVP
+## 6. How to Run This MVP
 
 ### Backend (FastAPI + Python)
 
