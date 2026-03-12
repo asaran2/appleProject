@@ -3,7 +3,7 @@
 
 Think of existing mental‑health journaling apps (Stoic, 5 Minute Journal) that combine prompts, mood tracking, and insights as your UX benchmark, but with deeper health data integration and personalization.
 
-**Screen Recording Demo of Karuna** - [https://drive.google.com/file/d/1FE0kJ0SjtZJSCo6Gjc5fQARCkc-9MYra/view?usp=sharing](Google Drive Link)
+**Screen Recording Demo of Karuna** - [Google Drive Link](https://drive.google.com/file/d/1FE0kJ0SjtZJSCo6Gjc5fQARCkc-9MYra/view?usp=sharing)
 
 ## 1. Key flows (MVP)
 
